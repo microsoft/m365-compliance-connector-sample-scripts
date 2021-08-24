@@ -16,7 +16,7 @@ $oAuthTokenEndpoint = "https://login.windows.net/$tenantId/oauth2/token"
 $resource = 'https://microsoft.onmicrosoft.com/4e476d41-2395-42be-89ff-34cb9186a1ac'
 
 # upload config
-$eventApiURl = "https://webhook-df.ingestion.office.com"
+$eventApiURl = "https://webhook.ingestion.office.com"
 $eventApiEndpoint = "api/signals"
 
 function GetAccessToken () {
