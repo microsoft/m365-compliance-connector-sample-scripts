@@ -31,7 +31,7 @@ $eventApiURl = "https://webhook.ingestion.office.com"
 $eventApiEndpoint = "api/signals"
 
 $serviceName = "PushConnector"
-$TmpDirName = $env:PATH + "cnD"
+$TmpDirName = $env:TEMP + "ctr###D"
 
 class FileMetdata {
     [string]$FileHash
@@ -241,8 +241,11 @@ function ComputeHashForInputFile($FileName) {
 #>
 function Send-ChunkedData($FileName, $linesperFile) {
     #$DirName = [System.IO.Path]::GetDirectoryName($FileName)
-    
-    New-Item -ItemType directory -Path $TmpDirName
+
+    if ( !(Test-Path $TmpDirName -PathType Container)) {
+        New-Item -ItemType directory -Path $TmpDirName
+    }
+
     $TmpFileName = "\tmp"
     $ext = ".txt"
     #$linesperFile = 10#100k
