@@ -269,6 +269,11 @@ function Send-ChunkedData($FileName, $linesperFile) {
                 $activeLineCount++
             }
             
+            if($reader.EndOfStream -eq $true)
+            {
+                Write-Verbose "All Rows already ingested from File with Count $activeLineCount"
+            }
+            
             while ($reader.EndOfStream -ne $true) {              
                 $linecount = 0
                 $NewFile = "{0}{1}{2}{3}" -f ($TmpDirName, $TmpFileName, $filecount.ToString("0000"), $ext)
