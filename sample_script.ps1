@@ -5,8 +5,32 @@
 # Examples
 #
 # Push data to M365 Compliance Connector:
-# .\sample_audit_script_new.ps1 -tenantId <Guid> -appId <App Id> -appSecret <App Secret> -jobId <Job id GUID> -filePath <File Path> -Verbose
-#
+# .\sample_script.ps1 -tenantId <Guid> -appId <App Id> -appSecret <App Secret> -jobId <Job id GUID> -filePath <File Path> -Verbose
+<#
+    .SYNOPSIS
+        Sample Script to push Data to M365 Compliance Connector. Script Takes an Input file, chunks it to predefined size and does the data push
+    .DESCRIPTION
+        Take Input File. Use the metadata for checkpointing and then compute start point.
+        Metadata has attributes corresponding to the last row for the file that was successfully sent. 
+        If no metadata exists, create new metadata and start processing from start of File.
+        If metadata exists start processing from point of last successful push.
+        Create Temporary File Chunks of specified Line Count.
+        Then fetch the access token and using the HttpClient generate a POST request
+    .PARAMETER TenantId
+        This is the Id for your Microsoft 365 organization. 
+        This is used to identify your organization.
+    .PARAMETER APPID
+        This is the Azure AD application Id for the app that you created in Azure AD. 
+        This is used by Azure AD for authentication when the script attempts to accesses your Microsoft 365 organization.
+    .PARAMETER APPSECRET
+        This is the Azure AD application secret for the app that you created in Azure AD. This also used for authentication.
+    .PARAMETER JOBID
+        The JobId retreived while setting up the Connector
+    .PARAMETER FilePath
+        This is the file path for the CSV file. Try to avoid spaces in the file path; otherwise use single quotation marks.
+    .PARAMETER RecordsPerCall
+        This is the chunk size to be used.
+#>
 param
 (   
     [Parameter(mandatory = $true)]
@@ -37,6 +61,7 @@ class FileMetdata {
     [string]$FileHash
     [string]$NoOfRowsWritten
     [string]$Service
+    [string]$LastModTime
 }
 
 function Get-AccessToken () {
@@ -177,8 +202,10 @@ function Push-Data ($access_token, $FileName) {
 }
 
 function GetOrCreateMetadata($FileName) {
+    # Handle Obsolete Metadata
+    HandleObsoleteMetadata
     $fileHash = ComputeHashForInputFile($FileName)
-    $metaDataFileName = $TmpDirName + "\." + $fileHash + "####mdata.txt"
+    $metaDataFileName = GetMetaDataFileName($fileHash)
     if ([System.IO.File]::Exists($metaDataFileName)) {
         # GET metadata from file
         $metadata = [FileMetdata](Get-Content $metaDataFileName | Out-String | ConvertFrom-Json)
@@ -191,8 +218,13 @@ function GetOrCreateMetadata($FileName) {
     $newmetadata = [FileMetdata]::new()
     $newmetadata.FileHash = $fileHash
     $newmetadata.NoOfRowsWritten = 0
+    $newmetadata.LastModTime = Get-Date -format "yyyy-MM-ddTHH:mm:ss"
     $newmetadata.Service = $serviceName
     return $newmetadata
+}
+
+function GetMetaDataFileName($FileHash) {
+    return $TmpDirName + "\." + $FileHash + "####mdata.txt"
 }
 
 function UpdateMetadata($FileName, $noOfRowsWritten) {
@@ -202,15 +234,19 @@ function UpdateMetadata($FileName, $noOfRowsWritten) {
     $filemetaData.FileHash = $fileHash
     $filemetaData.Service = $serviceName
     $filemetaData.NoOfRowsWritten = $noOfRowsWritten
-    $metaDataFilePath = $TmpDirName + "\." + $fileHash + "####mdata.txt"
+    $filemetaData.LastModTime = Get-Date -format "yyyy-MM-ddTHH:mm:ss"
+    $metaDataFilePath = GetMetaDataFileName($fileHash)
     $filemetaData | ConvertTo-Json -Depth 100 | Out-File $metaDataFilePath
 }
 
-function HandleObseleteMetadata() {
+function HandleObsoleteMetadata() {
     # Delete metadata which are over 14 days old
     $timeLimit = (Get-Date).AddDays(-14)
     $filePath = $TmpDirName
-    Get-ChildItem -Path $filePath -Recurse -Force | Where-Object { !$_.PSIsContainer -and $_.LastWriteTime -lt $timeLimit } | Where-Object { $_.Name -match '^.+\####mdata.txt$' } | Remove-Item -Force
+    Get-ChildItem -Path $filePath -Recurse -Force | 
+    Where-Object { !$_.PSIsContainer -and $_.LastWriteTime -lt $timeLimit } | 
+    Where-Object { $_.Name -match '^.+\####mdata.txt$' } | 
+    Remove-Item -Force
 }
 
 
@@ -240,7 +276,6 @@ function ComputeHashForInputFile($FileName) {
         Defines the Chunk Size
 #>
 function Send-ChunkedData($FileName, $linesperFile) {
-    #$DirName = [System.IO.Path]::GetDirectoryName($FileName)
 
     if ( !(Test-Path $TmpDirName -PathType Container)) {
         New-Item -ItemType directory -Path $TmpDirName
@@ -248,14 +283,11 @@ function Send-ChunkedData($FileName, $linesperFile) {
 
     $TmpFileName = "\tmp"
     $ext = ".txt"
-    #$linesperFile = 10#100k
     $filecount = 1
     $reader = $null
   
     try {
         $reader = [io.file]::OpenText($Filename)
-        # Handle Obselete Metadata
-        HandleObseleteMetadata
         # Create/Get Metadata
         $metaData = GetOrCreateMetadata($FileName)
 
@@ -268,6 +300,8 @@ function Send-ChunkedData($FileName, $linesperFile) {
                 $reader.ReadLine() | Out-Null
                 $activeLineCount++
             }
+            
+            Write-Verbose "Rows already ingested from File Count: $activeLineCount"
             
             while ($reader.EndOfStream -ne $true) {              
                 $linecount = 0
@@ -296,14 +330,15 @@ function Send-ChunkedData($FileName, $linesperFile) {
                     $access_token = Get-AccessToken
                     Push-Data($access_token, $fileName) $NewFile
                 }
+                
+                # Update metadata
+                UpdateMetadata $FileName $activeLineCount
    
                 Write-Verbose "Deleting file $NewFile"
                 Remove-Item $NewFile
             }
         }
-        finally {
-            # Update metadata 
-            UpdateMetadata $FileName $activeLineCount            
+        finally {     
             if ($null -ne $writer) {
                 $writer.Dispose();
             }
