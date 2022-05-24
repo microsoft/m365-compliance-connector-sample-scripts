@@ -44,7 +44,9 @@ param
     [Parameter(mandatory = $true)]
     [string] $FilePath,
     [Parameter(mandatory = $false)]
-    [Int] $RecordsPerCall = 50000
+    [Int] $RecordsPerCall = 50000,
+    [Parameter(mandatory = $false)]
+    [Int] $retryTimeout = 60
 )
 # Access Token Config
 $oAuthTokenEndpoint = "https://login.windows.net/$tenantId/oauth2/token"
@@ -114,7 +116,8 @@ function RetryCommand {
             }
             catch {
                 Write-Error $_.Exception.InnerException.Message -ErrorAction Continue
-                Start-Sleep 60
+                Write-Verbose("Will retry in [{0}] seconds" -f $retryTimeout)
+                Start-Sleep $retryTimeout
                 if ($cnt -lt $Maximum) {
                     Write-Output "Retrying"
                 }
@@ -196,8 +199,10 @@ function Push-Data ($access_token, $FileName) {
         throw "Service unavailable."
     }
     else {
-        Write-ErrorMessage("Failure with StatusCode [{0}] and ReasonPhrase [{1}]" -f $result.StatusCode, $result.ReasonPhrase)
+        $errorstring = "Failure with StatusCode [{0}] and ReasonPhrase [{1}]" -f $result.StatusCode, $result.ReasonPhrase
+        Write-ErrorMessage($errorstring)
         Write-ErrorMessage("Error body : {0}" -f $result.Content.ReadAsStringAsync().Result)
+        throw $errorstring
     }
 }
 
