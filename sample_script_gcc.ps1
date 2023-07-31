@@ -195,7 +195,7 @@ function Push-Data ($access_token, $FileName) {
             Write-Output("Body : {0}" -f $responseStr)
         }
     }
-    elseif ($status_code -eq 0 -or $status_code -eq 501 -or $status_code -eq 503) {
+    elseif ($status_code -eq 0 ) {
         throw "Service unavailable."
     }
     else {
