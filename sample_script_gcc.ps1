@@ -50,7 +50,7 @@ param
 )
 # Access Token Config
 $oAuthTokenEndpoint = "https://login.microsoftonline.com/$tenantId/oauth2/token"
-$resource = 'https://prdtrs01.prod.outlook.com/64342688-40f0-476d-8f18-ccf14147bae1'
+$resource = 'https://microsoft.onmicrosoft.com/86dfdabb-5089-4a0c-880a-cfa5a790c5b1'
 
 # Csv upload config
 $eventApiURl = "https://webhook-gcc.ingestion.office365.us/"
