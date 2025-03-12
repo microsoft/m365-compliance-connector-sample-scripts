@@ -50,7 +50,7 @@ param
 )
 # Access Token Config
 $oAuthTokenEndpoint = "https://login.microsoftonline.us/$tenantId/oauth2/token"
-$resource = 'https://gsgotrs.onmicrosoft.com/f02f9b48-c294-47cf-9b1a-86c1ef71896d'
+$resource = 'https://microsoft.onmicrosoft.com/86dfdabb-5089-4a0c-880a-cfa5a790c5b1'
 
 # Csv upload config
 $eventApiURl = "https://webhook-itarl5.ingestion.apps.mil"

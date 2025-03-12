@@ -50,7 +50,7 @@ param
 )
 # Access Token Config
 $oAuthTokenEndpoint = "https://login.windows.net/$tenantId/oauth2/token"
-$resource = 'https://microsoft.onmicrosoft.com/4e476d41-2395-42be-89ff-34cb9186a1ac'
+$resource = 'https://microsoft.onmicrosoft.com/86dfdabb-5089-4a0c-880a-cfa5a790c5b1'
 
 # Csv upload config
 $eventApiURl = "https://webhook.ingestion.office.com"
