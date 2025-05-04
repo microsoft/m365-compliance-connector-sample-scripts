@@ -31,6 +31,7 @@
     .PARAMETER RecordsPerCall
         This is the chunk size to be used.
 #>
+[CmdletBinding(DefaultParameterSetName = "default")] 
 param
 (   
     [Parameter(mandatory = $true)]
@@ -41,8 +42,10 @@ param
     [string] $appSecret,
     [Parameter(mandatory = $true)]
     [string] $jobId,
-    [Parameter(mandatory = $true)]
-    [string] $FilePath,
+    [Parameter(mandatory = $true, ParameterSetName = "default")]
+    [string] $filePath,
+    [Parameter(mandatory = $true, ParameterSetName = "backward-compat-support")]
+    [string] $csvFilePath,
     [Parameter(mandatory = $false)]
     [Int] $RecordsPerCall = 50000,
     [Parameter(mandatory = $false)]
@@ -356,4 +359,13 @@ function Send-ChunkedData($FileName, $linesperFile) {
     }
 }
 
-Send-ChunkedData $FilePath $RecordsPerCall
+$resolvedFilePath = $filePath;
+if (!$filePath) {
+    $resolvedFilePath = $csvFilePath
+}
+
+if (!$resolvedFilePath) {
+    Write-Error "Parmeter filePath is mandatory"
+}
+
+Send-ChunkedData $resolvedFilePath $RecordsPerCall
