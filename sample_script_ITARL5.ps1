@@ -286,7 +286,7 @@ function Send-ChunkedData($FileName, $linesperFile) {
         New-Item -ItemType directory -Path $TmpDirName
     }
 
-    $TmpFileName = "\tmp"
+    $TmpFileName = "\tmp" + "_" + [guid]::NewGuid().ToString()
     $ext = ".txt"
     $filecount = 1
     $reader = $null
