@@ -44,7 +44,7 @@ param
     [Parameter(mandatory = $true)]
     [string] $FilePath,
     [Parameter(mandatory = $false)]
-    [Int] $RecordsPerCall = 50000,
+    [Int] $RecordsPerCall = 5000,
     [Parameter(mandatory = $false)]
     [Int] $retryTimeout = 60
 )
